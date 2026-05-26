@@ -17,6 +17,7 @@ export default function GitHub() {
   const [loading, setLoading] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [clonedPath, setClonedPath] = useState<string | null>(null)
 
   async function pickDir() {
     const selected = await open({ directory: true, multiple: false })
@@ -43,6 +44,7 @@ export default function GitHub() {
     setLoading(true)
     setMessage(null)
     setNeedLogin(false)
+    setClonedPath(null)
     try {
       const dest = await invoke<string>("create_and_clone_repo", {
         name: repoName,
@@ -52,6 +54,7 @@ export default function GitHub() {
         proxy: getEffectiveProxy(),
       })
       setMessage({ ok: true, text: `已克隆到 ${dest}` })
+      setClonedPath(dest)
       setRepoName("")
     } catch (e) {
       const err = String(e)
@@ -108,9 +111,16 @@ export default function GitHub() {
             登录 GitHub
           </Button>
         ) : (
-          <Button className="w-full" onClick={handleCreate} disabled={loading || !canSubmit}>
-            {loading ? "创建中..." : "创建并克隆"}
-          </Button>
+          <div className="space-y-2">
+            <Button className="w-full" onClick={handleCreate} disabled={loading || !canSubmit}>
+              {loading ? "创建中..." : "创建并克隆"}
+            </Button>
+            {clonedPath && (
+              <Button className="w-full" variant="outline" onClick={() => invoke("open_in_cursor", { path: clonedPath })}>
+                用 Cursor 打开
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -41,6 +41,37 @@ async fn github_login(proxy: String) -> Result<(), String> {
     Ok(())
 }
 
+fn find_cursor() -> Option<String> {
+    let home = std::env::var("LOCALAPPDATA").ok()?;
+    let candidates = [
+        format!(r"{}\Programs\cursor\Cursor.exe", home),
+        format!(r"{}\Programs\Cursor\Cursor.exe", home),
+        r"C:\Program Files\Cursor\Cursor.exe".to_string(),
+    ];
+    for p in &candidates {
+        if std::path::Path::new(p).exists() {
+            return Some(p.clone());
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn open_in_cursor(path: String) -> Result<(), String> {
+    if let Some(cursor) = find_cursor() {
+        Command::new(&cursor)
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("无法打开 Cursor: {}", e))?;
+    } else {
+        Command::new("cmd")
+            .args(["/C", "cursor", &path])
+            .spawn()
+            .map_err(|e| format!("无法打开 Cursor: {}", e))?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn create_and_clone_repo(
     name: String,
@@ -150,7 +181,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![create_and_clone_repo, github_login])
+        .invoke_handler(tauri::generate_handler![create_and_clone_repo, github_login, open_in_cursor])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
