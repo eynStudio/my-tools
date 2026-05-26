@@ -1,8 +1,9 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { Home, Settings } from "lucide-react"
+import { Home, Settings, GitBranch } from "lucide-react"
 
 const navItems = [
   { to: "/", label: "首页", icon: Home },
+  { to: "/github", label: "GitHub", icon: GitBranch },
   { to: "/settings", label: "设置", icon: Settings },
 ] as const
 
