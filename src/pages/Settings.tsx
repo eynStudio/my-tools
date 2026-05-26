@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { getProxyEnabled, getProxyUrl, setProxyEnabled, setProxyUrl } from "@/lib/settings"
+import { getProxyEnabled, getProxyUrl, setProxyEnabled, setProxyUrl, MODULES, getModuleVisibility, setModuleVisibility, isModuleSupported } from "@/lib/settings"
 
-type Category = "general" | "network"
+type Category = "general" | "modules" | "network"
 
 const categories: { id: Category; label: string }[] = [
   { id: "general", label: "通用" },
+  { id: "modules", label: "功能模块" },
   { id: "network", label: "网络" },
 ]
 
@@ -89,8 +90,47 @@ function NetworkSettings() {
   )
 }
 
-const panels: Record<Category, () => JSX.Element> = {
+function ModuleSettings() {
+  const [vis, setVis] = useState(getModuleVisibility)
+
+  function toggle(id: string, val: boolean) {
+    const next = { ...vis, [id]: val }
+    setVis(next)
+    setModuleVisibility(next)
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">功能模块</h2>
+      <p className="text-sm text-muted-foreground">控制哪些功能模块显示在导航菜单中。</p>
+      <div className="space-y-3">
+        {MODULES.map((m) => {
+          const supported = isModuleSupported(m)
+          return (
+            <div key={m.id} className="flex items-center gap-2">
+              <input
+                id={`mod-${m.id}`}
+                type="checkbox"
+                checked={vis[m.id] ?? false}
+                disabled={!supported}
+                onChange={(e) => toggle(m.id, e.target.checked)}
+                className="size-4 rounded"
+              />
+              <Label htmlFor={`mod-${m.id}`}>{m.label}</Label>
+              {!supported && (
+                <span className="text-xs text-muted-foreground">（当前系统不支持）</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const panels: Record<Category, () => React.ReactElement> = {
   general: GeneralSettings,
+  modules: ModuleSettings,
   network: NetworkSettings,
 }
 

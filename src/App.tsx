@@ -1,17 +1,32 @@
+import { useEffect, useState } from "react"
 import { NavLink, Outlet } from "react-router-dom"
 import { Home, Settings, GitBranch } from "lucide-react"
+import { isModuleVisible } from "@/lib/settings"
 
 const navItems = [
   { to: "/", label: "首页", icon: Home },
-  { to: "/github", label: "GitHub", icon: GitBranch },
+  { to: "/github", label: "GitHub", icon: GitBranch, module: "github" },
   { to: "/settings", label: "设置", icon: Settings },
 ] as const
 
 export default function App() {
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    const handler = () => setTick((t) => t + 1)
+    window.addEventListener("modules-changed", handler)
+    return () => window.removeEventListener("modules-changed", handler)
+  }, [])
+
+  const visibleItems = navItems.filter((item) => {
+    if ("module" in item) return isModuleVisible(item.module)
+    return true
+  })
+
   return (
     <div className="h-screen flex flex-col">
       <nav className="flex items-center gap-1 border-b px-4 py-2 bg-muted/40">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {visibleItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
