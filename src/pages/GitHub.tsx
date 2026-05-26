@@ -5,37 +5,30 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { FolderOpen, LogIn } from "lucide-react"
+import { getEffectiveProxy, getOrg, setOrg as saveOrg, getWorkDir, setWorkDir as saveWorkDir } from "@/lib/settings"
 
 const NEED_LOGIN = "__NEED_LOGIN__"
-const PROXY_KEY = "github_proxy"
-
-function loadProxy(): string {
-  return localStorage.getItem(PROXY_KEY) || ""
-}
 
 export default function GitHub() {
-  const [proxy, setProxy] = useState(loadProxy)
   const [repoName, setRepoName] = useState("")
   const [privateRepo, setPrivateRepo] = useState(true)
-  const [orgName, setOrgName] = useState("")
-  const [workDir, setWorkDir] = useState("")
+  const [orgName, setOrgName] = useState(getOrg)
+  const [workDir, setWorkDir] = useState(getWorkDir)
   const [loading, setLoading] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
-  function updateProxy(val: string) {
-    setProxy(val)
-    localStorage.setItem(PROXY_KEY, val)
-  }
-
   async function pickDir() {
     const selected = await open({ directory: true, multiple: false })
-    if (selected) setWorkDir(selected)
+    if (selected) {
+      setWorkDir(selected)
+      saveWorkDir(selected)
+    }
   }
 
   async function handleLogin() {
     try {
-      await invoke("github_login", { proxy })
+      await invoke("github_login", { proxy: getEffectiveProxy() })
       setMessage({ ok: true, text: "请在弹出的 PowerShell 窗口中完成登录，完成后重新点击「创建并克隆」" })
       setNeedLogin(false)
     } catch (e) {
@@ -45,6 +38,8 @@ export default function GitHub() {
 
   async function handleCreate() {
     if (!repoName || !orgName || !workDir) return
+    saveOrg(orgName)
+    saveWorkDir(workDir)
     setLoading(true)
     setMessage(null)
     setNeedLogin(false)
@@ -54,7 +49,7 @@ export default function GitHub() {
         org: orgName,
         workDir,
         private: privateRepo,
-        proxy,
+        proxy: getEffectiveProxy(),
       })
       setMessage({ ok: true, text: `已克隆到 ${dest}` })
       setRepoName("")
@@ -77,11 +72,6 @@ export default function GitHub() {
     <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-md space-y-5 p-6">
         <h2 className="text-xl font-semibold text-center">创建 GitHub 仓库</h2>
-
-        <div className="space-y-2">
-          <Label htmlFor="proxy">代理地址</Label>
-          <Input id="proxy" placeholder="http://127.0.0.1:7890" value={proxy} onChange={(e) => updateProxy(e.target.value)} />
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="repo">仓库名称</Label>
