@@ -9,14 +9,13 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ["react", "react-dom"],
   },
-  // https://tauri.app/start/frontend/vite/#dev-server
   clearScreen: false,
   server: {
     port: 5173,
     strictPort: true,
   },
-  // https://vitejs.dev/config/build-options
   build: {
     target: ["es2021", "chrome100", "safari13"],
     minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
