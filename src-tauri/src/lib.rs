@@ -107,14 +107,11 @@ async fn create_and_clone_repo(
     }
 
     let clone_url = format!("git@github.com:{}/{}.git", org, name);
-    let dest = if work_dir.ends_with('/') || work_dir.ends_with('\\') {
-        format!("{}{}", work_dir, name)
-    } else {
-        format!("{}/{}", work_dir, name)
-    };
+    let dest = std::path::PathBuf::from(&work_dir).join(&name);
+    let dest_str = dest.to_string_lossy().to_string();
 
     let output = Command::new("git")
-        .args(["clone", &clone_url, &dest])
+        .args(["clone", &clone_url, &dest_str])
         .output()
         .map_err(|e| format!("git 执行失败: {}", e))?;
 
@@ -122,7 +119,7 @@ async fn create_and_clone_repo(
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
 
-    Ok(dest)
+    Ok(dest_str)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
