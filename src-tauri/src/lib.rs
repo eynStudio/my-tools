@@ -1,5 +1,11 @@
 use std::process::Command;
 
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
+
 const NEED_LOGIN: &str = "__NEED_LOGIN__";
 
 fn find_gh() -> String {
@@ -19,14 +25,15 @@ fn find_gh() -> String {
 async fn github_login(proxy: String) -> Result<(), String> {
     let gh = find_gh();
     let mut cmd = Command::new("cmd");
-    cmd.args([
-        "/C", "start", "powershell", "-NoExit", "-Command",
-    ]);
+    cmd.args(["/C", "start", "powershell", "-NoExit", "-Command"]);
 
     let ps_cmd = if proxy.is_empty() {
         format!("& '{}' auth login", gh)
     } else {
-        format!("$env:HTTPS_PROXY='{}'; $env:HTTP_PROXY='{}'; & '{}' auth login", proxy, proxy, gh)
+        format!(
+            "$env:HTTPS_PROXY='{}'; $env:HTTP_PROXY='{}'; & '{}' auth login",
+            proxy, proxy, gh
+        )
     };
     cmd.arg(&ps_cmd);
 
@@ -35,7 +42,13 @@ async fn github_login(proxy: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn create_and_clone_repo(name: String, org: String, work_dir: String, private: bool, proxy: String) -> Result<String, String> {
+async fn create_and_clone_repo(
+    name: String,
+    org: String,
+    work_dir: String,
+    private: bool,
+    proxy: String,
+) -> Result<String, String> {
     let gh = find_gh();
     let visibility = if private { "--private" } else { "--public" };
     let full_name = format!("{}/{}", org, name);
@@ -94,6 +107,43 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            let show = MenuItemBuilder::with_id("show", "显示主窗口").build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
+            let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .tooltip("My Tools")
+                .on_menu_event(|app: &tauri::AppHandle, event| match event.id().as_ref() {
+                    "show" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray: &tauri::tray::TrayIcon, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![create_and_clone_repo, github_login])

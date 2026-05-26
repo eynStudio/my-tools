@@ -2,10 +2,17 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import App from "./App"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import Home from "./pages/Home"
 import GitHub from "./pages/GitHub"
 import Settings from "./pages/Settings"
 import "./index.css"
+
+const appWindow = getCurrentWindow()
+appWindow.onCloseRequested(async (event) => {
+  event.preventDefault()
+  await appWindow.hide()
+})
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
