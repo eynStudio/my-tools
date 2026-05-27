@@ -140,6 +140,16 @@ pub fn run() {
                 )?;
             }
 
+            let version = env!("CARGO_PKG_VERSION");
+            let title = if cfg!(debug_assertions) {
+                format!("My Tools v{} [debug]", version)
+            } else {
+                format!("My Tools v{}", version)
+            };
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_title(&title);
+            }
+
             let show = MenuItemBuilder::with_id("show", "显示主窗口").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
             let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
